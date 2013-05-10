@@ -2,6 +2,7 @@
 module Main where
 
 import qualified Network.MPD as MPD
+import qualified Network.MPD.Commands.Extensions as MPDx
 import Happstack.Server
 import Control.Monad
 import Control.Monad.Trans
@@ -14,8 +15,12 @@ import Data.Map.Lazy
 
 mapping :: ServerPartT IO Response
 mapping = msum [
-        dir "play" play,
+        dir "play" $ path (\s->play $ Just s),
+        dir "play" $ play Nothing,
         dir "stop" stop,
+        dir "toggle" toggle,
+        dir "resume" resume,
+        dir "pause" stop,
         dir "list" playlist,
         dir "files" $ path filelist,
         dir "files" $ filelist ""
@@ -24,14 +29,29 @@ mapping = msum [
 main :: IO ()
 main = simpleHTTP nullConf mapping
 
-play :: ServerPartT IO Response
-play = do
-     res <- liftIO $ MPD.withMPD $ MPD.play Nothing
+play :: Maybe Int -> ServerPartT IO Response
+play a = do
+     res <- liftIO $ MPD.withMPD $ MPD.play a
      simpleReply res
 
 stop :: ServerPartT IO Response
 stop = do
      res <- liftIO $ MPD.withMPD $ MPD.stop
+     simpleReply res
+
+pause :: ServerPartT IO Response
+pause = do
+     res <- liftIO $ MPD.withMPD $ MPD.pause True
+     simpleReply res
+
+resume :: ServerPartT IO Response
+resume = do
+     res <- liftIO $ MPD.withMPD $ MPD.pause False
+     simpleReply res
+
+toggle :: ServerPartT IO Response
+toggle = do
+     res <- liftIO $ MPD.withMPD $ MPDx.toggle
      simpleReply res
 
 playlist = do
