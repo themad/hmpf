@@ -23,7 +23,8 @@ mapping = msum [
         dir "pause" stop,
         dir "list" playlist,
         dir "files" $ path filelist,
-        dir "files" $ filelist ""
+        dir "files" $ filelist "",
+        dir "playlists" $ playlists
         ]
 
 main :: IO ()
@@ -54,26 +55,51 @@ toggle = do
      res <- liftIO $ MPD.withMPD $ MPDx.toggle
      simpleReply res
 
-playlist = do
+playlist = msum [ playlistIndex, path (\s->playlistAdd s) ]
+
+playlistAdd s = do
+         method POST
+         res <- liftIO $ MPD.withMPD $ MPD.add_ s
+         simpleReply res
+
+playlistIndex = do
+         method GET
          res <- liftIO $ MPD.withMPD $ MPD.playlistInfo Nothing
          case res of
               Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-              Right list -> ok $ toResponse $ toJSON (Prelude.take 5 list)
+              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
 
 filelist p = do
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
          case res of
               Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-              Right list -> ok $ toResponse $ toJSON (Prelude.take 5 list)
-
+              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
 
 simpleReply a = case a of
           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
           Right yay -> ok $ toResponse $ toJSON yay
 
+playlists = msum [ playlistsIndex, path (\s->playlistsLoad s) ]
+
+playlistsLoad s = do
+         method POST
+         res <- liftIO $ MPD.withMPD $ MPD.load s
+         simpleReply res
+
+playlistsIndex = do
+         method GET
+         res <- liftIO $ MPD.withMPD $ MPD.listPlaylists
+         case res of
+              Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
+
 instance ToMessage Value where
                    toMessage s = encode s
                    toContentType _ = BS.pack "application/json" 
+
+instance FromReqURI MPD.PlaylistName where
+         fromReqURI a = Just $ MPD.PlaylistName (BS.pack a)
+
 
 instance FromReqURI MPD.Path where
          fromReqURI a = Just $ MPD.Path (BS.pack a)
@@ -87,6 +113,7 @@ instance ToJSON (Map MPD.Metadata [MPD.Value]) where
 
 instance FromJSON (Map MPD.Metadata [MPD.Value]) where
          parseJSON _ = mzero
+
 
 $(deriveJSON id ''MPD.MPDError)
 $(deriveJSON id ''MPD.ACKType)
