@@ -24,7 +24,8 @@ mapping = msum [
         dir "list" playlist,
         dir "files" $ path filelist,
         dir "files" $ filelist "",
-        dir "playlists" $ playlists
+        dir "playlists" $ playlists,
+        status
         ]
 
 main :: IO ()
@@ -38,6 +39,11 @@ play a = do
 stop :: ServerPartT IO Response
 stop = do
      res <- liftIO $ MPD.withMPD $ MPD.stop
+     simpleReply res
+
+status :: ServerPartT IO Response
+status = do
+     res <- liftIO $ MPD.withMPD $ MPD.status
      simpleReply res
 
 pause :: ServerPartT IO Response
@@ -116,6 +122,8 @@ instance FromJSON (Map MPD.Metadata [MPD.Value]) where
 
 
 $(deriveJSON id ''MPD.MPDError)
+$(deriveJSON id ''MPD.Status)
+$(deriveJSON id ''MPD.State)
 $(deriveJSON id ''MPD.ACKType)
 $(deriveJSON id ''MPD.Value)
 $(deriveJSON id ''MPD.Id)
