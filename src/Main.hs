@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main where
 
 import qualified Network.MPD as MPD
@@ -8,10 +9,15 @@ import Control.Monad
 import Control.Monad.Trans
 import Data.ByteString.Char8 as BS
 import Data.Text
-import Data.Text.Encoding
+-- import Data.Text.Encoding ()
 import Data.Aeson 
 import Data.Aeson.TH
 import Data.Map.Lazy
+import Control.Applicative (optional)
+import Data.Maybe (fromMaybe)
+
+class SimpleReply a where
+      simpleReply :: a -> ServerPartT IO Response
 
 mapping :: ServerPartT IO Response
 mapping = msum [
@@ -61,6 +67,7 @@ toggle = do
      res <- liftIO $ MPD.withMPD $ MPDx.toggle
      simpleReply res
 
+playlist :: ServerPartT IO Response
 playlist = msum [ playlistIndex, path (\s->playlistAdd s) ]
 
 playlistAdd s = do
@@ -71,19 +78,11 @@ playlistAdd s = do
 playlistIndex = do
          method GET
          res <- liftIO $ MPD.withMPD $ MPD.playlistInfo Nothing
-         case res of
-              Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
+         simpleReply res
 
 filelist p = do
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
-         case res of
-              Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
-
-simpleReply a = case a of
-          Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-          Right yay -> ok $ toResponse $ toJSON yay
+         simpleReply res
 
 playlists = msum [ playlistsIndex, path (\s->playlistsLoad s) ]
 
@@ -95,9 +94,33 @@ playlistsLoad s = do
 playlistsIndex = do
          method GET
          res <- liftIO $ MPD.withMPD $ MPD.listPlaylists
-         case res of
-              Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
-              Right list -> ok $ toResponse $ toJSON (Prelude.take 1000 list)
+         simpleReply res
+
+instance SimpleReply (MPD.Response MPD.Status) where
+         simpleReply a = case a of
+           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Right yay -> ok $ toResponse $ toJSON yay
+           
+instance (ToJSON x) => SimpleReply (MPD.Response [x]) where
+         simpleReply a = case a of
+           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Right yay -> paginate yay >>= ok . toResponse . toJSON
+
+instance SimpleReply (MPD.Response ()) where
+         simpleReply a = case a of
+           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Right yay -> ok $ toResponse $ toJSON yay
+
+paginate :: [a] -> ServerPartT IO [a]
+paginate l = do
+        startnum_ <- optional $ lookRead "start"
+        let s = (fromMaybe 1 startnum_) - 1
+        msum [withEnd s, withoutEnd s]
+        where 
+          withEnd s = do
+              endnum <- lookRead "count"
+              return $ Prelude.take endnum $ Prelude.drop s l
+          withoutEnd s = return $ Prelude.drop s l
 
 instance ToMessage Value where
                    toMessage s = encode s
@@ -110,7 +133,7 @@ instance FromReqURI MPD.PlaylistName where
 instance FromReqURI MPD.Path where
          fromReqURI a = Just $ MPD.Path (BS.pack a)
 
-$(deriveJSON id ''MPD.Metadata)
+$(deriveJSON (Prelude.drop 2) ''MPD.Metadata)
 
 instance ToJSON (Map MPD.Metadata [MPD.Value]) where
          toJSON m = object $ elems keyval
@@ -121,16 +144,26 @@ instance FromJSON (Map MPD.Metadata [MPD.Value]) where
          parseJSON _ = mzero
 
 
+-- $(deriveJSON (Prelude.drop 2) ''MPD.LsResult)
+-- warum funktioniert das da nicht???
+instance ToJSON MPD.LsResult where
+         toJSON (MPD.LsDirectory a) = object $ ["Directory" .= a]
+         toJSON (MPD.LsSong a) = object $ ["Song" .= a]
+         toJSON (MPD.LsPlaylist a) = object $ ["Playlist" .= a]
+
+instance FromJSON MPD.LsResult where
+         parseJSON _ = mzero
+
 $(deriveJSON id ''MPD.MPDError)
-$(deriveJSON id ''MPD.Status)
-$(deriveJSON id ''MPD.State)
+$(deriveJSON (Prelude.drop 2) ''MPD.Status)
+$(deriveJSON (Prelude.drop 2) ''MPD.State)
 $(deriveJSON id ''MPD.ACKType)
-$(deriveJSON id ''MPD.Value)
+$(deriveJSON (Prelude.drop 2) ''MPD.Value)
 $(deriveJSON id ''MPD.Id)
 $(deriveJSON id ''MPD.Path)
 -- $(deriveJSON (Prelude.drop 2) ''MPD.Song)
-$(deriveJSON id ''MPD.Song)
-$(deriveJSON id ''MPD.LsResult)
+$(deriveJSON (Prelude.drop 2) ''MPD.Song)
+
 $(deriveJSON id ''MPD.PlaylistName)
 -- $(deriveJSON (Prelude.drop 2) ''MPD.LsResult)
 -- $(deriveJSON (Prelude.drop 2) ''MPD.PlaylistName)

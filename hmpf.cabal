@@ -52,5 +52,5 @@ executable hmpf
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.6.*,happstack-server,libmpd,text,mtl,aeson,containers
+  build-depends:       base ==4.6.*,happstack-server,libmpd,text,mtl,aeson,containers,bytestring
   
