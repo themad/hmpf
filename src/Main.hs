@@ -27,11 +27,14 @@ mapping = msum [
         dir "toggle" toggle,
         dir "resume" resume,
         dir "pause" stop,
+        dir "next" next,
+        dir "previous" previous,
         dir "list" playlist,
         dir "files" $ path filelist,
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
-        status
+        dir "status" $ status,
+        dir "/" $  status
         ]
 
 main :: IO ()
@@ -41,6 +44,17 @@ play :: Maybe Int -> ServerPartT IO Response
 play a = do
      res <- liftIO $ MPD.withMPD $ MPD.play a
      simpleReply res
+
+next :: ServerPartT IO Response
+next = do
+     res <- liftIO $ MPD.withMPD $ MPD.next
+     simpleReply res
+
+previous :: ServerPartT IO Response
+previous = do
+     res <- liftIO $ MPD.withMPD $ MPD.previous
+     simpleReply res
+
 
 stop :: ServerPartT IO Response
 stop = do
@@ -73,7 +87,13 @@ playlist = msum [ playlistIndex, path (\s->playlistAdd s) ]
 playlistAdd s = do
          method POST
          res <- liftIO $ MPD.withMPD $ MPD.add_ s
-         simpleReply res
+         case res of
+           Left err -> case err of
+                MPD.ACK a s -> case a of
+                    MPD.FileNotFound -> notFound $ toResponse $ toJSON (object ["Error" .= err])
+                    _ -> simpleReply res
+                _ -> simpleReply res
+           Right yay -> simpleReply res
 
 playlistIndex = do
          method GET
@@ -82,7 +102,14 @@ playlistIndex = do
 
 filelist p = do
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
-         simpleReply res
+         case res of
+           Left err -> case err of
+                MPD.ACK a s -> case a of
+                    MPD.FileNotFound -> notFound $ toResponse $ toJSON (object ["Error" .= err])
+                    _ -> simpleReply res
+                _ -> simpleReply res
+           Right yay -> simpleReply res
+
 
 playlists = msum [ playlistsIndex, path (\s->playlistsLoad s) ]
 
