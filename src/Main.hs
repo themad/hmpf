@@ -92,6 +92,7 @@ toggle = do
 playlist :: ServerPartT IO Response
 playlist = msum [ playlistIndex, path (\s->playlistAdd s) ]
 
+playlistAdd :: MPD.Path -> ServerPartT IO Response
 playlistAdd s = do
          method POST
          res <- liftIO $ MPD.withMPD $ MPD.add_ s
@@ -103,11 +104,13 @@ playlistAdd s = do
                 _ -> simpleReply res
            Right yay -> simpleReply res
 
+playlistIndex :: ServerPartT IO Response
 playlistIndex = do
          method GET
          res <- liftIO $ MPD.withMPD $ MPD.playlistInfo Nothing
          simpleReply res
 
+filelist :: MPD.Path -> ServerPartT IO Response
 filelist p = do
          method GET
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
@@ -120,13 +123,16 @@ filelist p = do
            Right yay -> simpleReply res
 
 
+playlists :: ServerPartT IO Response
 playlists = msum [ playlistsIndex, path (\s->playlistsLoad s) ]
 
+playlistsLoad :: MPD.PlaylistName -> ServerPartT IO Response
 playlistsLoad s = do
          method POST
          res <- liftIO $ MPD.withMPD $ MPD.load s
          simpleReply res
 
+playlistsIndex :: ServerPartT IO Response
 playlistsIndex = do
          method GET
          res <- liftIO $ MPD.withMPD $ MPD.listPlaylists
