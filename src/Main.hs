@@ -26,7 +26,7 @@ mapping = msum [
         dir "stop" stop,
         dir "toggle" toggle,
         dir "resume" resume,
-        dir "pause" stop,
+        dir "pause" pause,
         dir "next" next,
         dir "previous" previous,
         dir "list" playlist,
@@ -42,42 +42,50 @@ main = simpleHTTP nullConf mapping
 
 play :: Maybe Int -> ServerPartT IO Response
 play a = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.play a
      simpleReply res
 
 next :: ServerPartT IO Response
 next = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.next
      simpleReply res
 
 previous :: ServerPartT IO Response
 previous = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.previous
      simpleReply res
 
 
 stop :: ServerPartT IO Response
 stop = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.stop
      simpleReply res
 
 status :: ServerPartT IO Response
 status = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.status
      simpleReply res
 
 pause :: ServerPartT IO Response
 pause = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.pause True
      simpleReply res
 
 resume :: ServerPartT IO Response
 resume = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPD.pause False
      simpleReply res
 
 toggle :: ServerPartT IO Response
 toggle = do
+     method POST
      res <- liftIO $ MPD.withMPD $ MPDx.toggle
      simpleReply res
 
@@ -101,6 +109,7 @@ playlistIndex = do
          simpleReply res
 
 filelist p = do
+         method GET
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
          case res of
            Left err -> case err of
