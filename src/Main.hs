@@ -12,9 +12,10 @@ import Data.Text
 -- import Data.Text.Encoding ()
 import Data.Aeson 
 import Data.Aeson.TH
-import Data.Map.Lazy
+import Data.Map.Lazy (Map, mapWithKey, elems)
 import Control.Applicative (optional)
 import Data.Maybe (fromMaybe)
+import Data.HashMap.Strict (insert)
 
 class SimpleReply a where
       simpleReply :: a -> ServerPartT IO Response
@@ -29,12 +30,14 @@ mapping = msum [
         dir "pause" pause,
         dir "next" next,
         dir "previous" previous,
+        dir "prev" previous,
         dir "list" playlist,
         dir "files" $ path filelist,
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
         dir "status" $ status,
-        dir "/" $  status
+        dir "/" $  status,
+        serveDirectory EnableBrowsing ["index.html"] "static"
         ]
 
 main :: IO ()
@@ -67,9 +70,21 @@ stop = do
 
 status :: ServerPartT IO Response
 status = do
-     method POST
      res <- liftIO $ MPD.withMPD $ MPD.status
-     simpleReply res
+     case res of
+           Right x -> 
+             case (MPD.stSongID x) of
+               Nothing -> simpleReply res
+               Just a  -> do
+                    songinfo <- liftIO $ MPD.withMPD $ MPD.playlistId $ Just a
+                    case songinfo of
+                      Right [s] -> ok $ toResponse $ combine x (toJSON s)
+                      _ -> ok $ toResponse $ combine x Null
+           _ -> simpleReply res
+     where 
+           combine a b = case toJSON a of 
+                   Object o -> Object $ insert "Song" b o
+                   _ -> toJSON a
 
 pause :: ServerPartT IO Response
 pause = do
@@ -98,7 +113,7 @@ playlistAdd s = do
          res <- liftIO $ MPD.withMPD $ MPD.add_ s
          case res of
            Left err -> case err of
-                MPD.ACK a s -> case a of
+                MPD.ACK a _ -> case a of
                     MPD.FileNotFound -> notFound $ toResponse $ toJSON (object ["Error" .= err])
                     _ -> simpleReply res
                 _ -> simpleReply res
