@@ -1,0 +1,41 @@
+
+.true, .false {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin:0 2px;
+}
+.true {
+    border: 2px solid #47e;
+    background-color: #4e7;
+    border-radius: 5px;
+}
+.false {
+    border: 2px solid #47e;
+    border-radius: 5px;
+}
+
+.TimeProgress {
+    width:100px;
+}
+.done, .notdone {
+    display: inline-block;
+    height: 10px;
+}
+.done {
+    background-color: #aea;
+    border-radius: 5px 0px 0px 5px;
+}
+.notdone {
+    background-color: #aaa;
+    border-radius: 0px 5px 5px 0px;
+}
+
+.button {
+    display: inline-block;
+    background-color: #333;
+    border-radius: 5px;   
+    color: #fff;
+    padding: 5px 8px;
+    cursor: pointer; 
+}
