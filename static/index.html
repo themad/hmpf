@@ -8,6 +8,7 @@
     <script src="js.js" type="text/javascript"></script>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
   </head>
+  <body>
     <div id="jfhmpf">
 
       <div class="statusBox">
@@ -20,7 +21,15 @@
           Single: <span class="Single"></span>,
           Consume: <span class="Consume"></span>,
           Bitrate: <span class="Bitrate"></span>
-          <div class="TimeProgress"><div class="done"></div><div class="notdone"></div>
+          <div class="TimeProgress"><div class="done"></div><div class="notdone"></div></div>
+        </div>
+      </div>
+
+      <div class="actionsBox">
+        <div class="actions">
+          <div class="button prev">prev</div>
+          <div class="button toggle">playse</div>
+          <div class="button next">next</div>
         </div>
       </div>
 
@@ -32,18 +41,9 @@
             <span class="Title"></span>
           </li>
         </ul>
-        <span class="button prevPage">prev</span>
-        <span class="button nextPage">prev</span>
+        <span class="active prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="active nextPage">next</span>
       </div>
 
-      <div class="actionsBox">
-        <div class="actions">
-          <div class="button prev">prev</div>
-          <div class="button toggle">playse</div>
-          <div class="button next">next</div>
-        </div>
-      </div>
     </div>
-  <body>
   </body>
 </html>

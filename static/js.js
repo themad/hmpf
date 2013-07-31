@@ -5,22 +5,19 @@
                 data = $this.data('jfhmpf');
             if(!data) {
                 data = {
-                    widgets: {
-                        root: $this,
-                        status: $this.find('.statusBox .status'),
-                        list: $this.find('.listBox .list')
+                    root: $this,
+                    status: {
+                        widget: $this.find('.statusBox .status'),
                     },
-                    templates: {
-                        listItem: $this.find('.listBox .list .listItem').detach()
+                    playlist: {
+                        widget: $this.find('.listBox'),
+                        list: $this.find('.listBox .list'),
+                        listItem: $this.find('.listBox .list .listItem').detach(),
                     },
-                    results: {
-                        status: null,
-                        list: null
-                    },
-                    init: {}
+                    config: {}
                 };
                 if(typeof initData=='object') {
-                    $.each(initData, function(k, v) { data.init[k] = v; });
+                    $.each(initData, function(k, v) { data.config[k] = v; });
                 }
                 $this.data('jfhmpf', data);
 
@@ -29,69 +26,85 @@
                 });
 
             }
-            $.each(['status', 'list'], function(i, s) {
-                if(data.widgets[s].length) $this.jfhmpf(s);
+            $.each(['status', 'playlist'], function(i, s) {
+                if(data[s].widget.length) $this.jfhmpf(s);
             });
 
             return this;
         },
         status: function() {
             var data = $(this).data('jfhmpf'),
-                widgt = data.widgets.status;
+                widget = data.status.widget;
 
             $.jpost('/status', {}, function(r) {
-                data.results.status = r;
-                $(this).data('jfhmpf', data);
-
-                $.each(r, function(k, v) {
-                    switch(k) {
+                $.each(r, function(key, value) {
+                    data.status['mpd_' + key] = value;
+                    switch(key) {
                         case 'Time':
-                            var prgrs = widgt.find('.TimeProgress'),
+                            var prgrs = widget.find('.TimeProgress'),
                                 w = prgrs.width(),
-                                done = v[0]/v[1];
+                                done = value[0]/value[1];
                             prgrs.find('.done').css({width:(done*w) + 'px'});
                             prgrs.find('.notdone').css({width:((1-done)*w) + 'px'});
                             break;
                         case 'State':
-                            var stt = widgt.find('.State');
-                            $.each(v, function(k, v) {
-                                stt.html(k);
-                            });
+                            var stt = widget.find('.State');
+                            $.each(value, function(state) { stt.html(state); });
                             break;
                         case 'Consume':case 'Random':case 'Repeat': case 'Single': case 'Consume':
-                            widgt.find('.' + k).addClass(v ? 'true' : 'false')
+                            widget.find('.' + key).addClass(value ? 'true' : 'false')
                             break;
                         default:
-                            widgt.find('.' + k).html(v);
+                            widget.find('.' + key).html(value);
                             break;
                     }
                 });
+                $(this).data('jfhmpf', data);
             });
         },
-        list: function() {
-            var data = $(this).data('jfhmpf'),
-                widgt = data.widgets.list,
-                tmpl = data.templates.listItem,
-                status = data.results.status;
+        playlist: function() {
+            var $this = $(this);
+                data = $this.data('jfhmpf'),
+                widget = data.playlist.widget,
+                list = data.playlist.list,
+                tmpl = data.playlist.listItem,
+                page = data.playlist.page ? data.playlist.page : 0,
+                pages = Math.floor(data.status.mpd_PlaylistLength / data.config.listPageSize);
 
-            $.jget('/list/?count=10&start=0', function(r) {
-                data.results.list = r;
-                $(this).data('jfhmpf', data);
+            widget.find('.prevPage').unbind('click').addClass('disabled');
+            widget.find('.nextPage').unbind('click').addClass('disabled');
+            if(page>0) {
+                widget.find('.prevPage').click(function() {
+                    data.playlist.page = page - 1;
+                    $this.data('jfhmpf', data);
+                    $this.jfhmpf('playlist');
+                }).removeClass('disabled');
+            }
+            if(page<pages) {
+                widget.find('.nextPage').click(function() {
+                    data.playlist.page = page + 1;
+                    $this.data('jfhmpf', data);
+                    $this.jfhmpf('playlist');
+                }).removeClass('disabled');
+            }
+            widget.find('.currentPage').html(page + 1);
+            widget.find('.lastPage').html(pages + 1);
 
-                widgt.find('.listItem').remove();
 
-                $.each(r, function(i, idata) {
+            $.jget('/list/?count=' + data.config.listPageSize + '&start=' + ((page * data.config.listPageSize) + 1), function(r) {
+                widget.find('.listItem').remove();
+                $.each(r, function(i, track) {
                     var itm = tmpl.clone();
-                    idata.Tags.FilePath = idata.FilePath;
-                    idata.Tags.Length = idata.Length;
-                    $.each(idata.Tags, function(k, v) {
-                        switch(k) {
+                    track.Tags.FilePath = track.FilePath;
+                    track.Tags.Length = track.Length;
+                    $.each(track.Tags, function(key, value) {
+                        switch(key) {
                             default:
-                                itm.find('.' + k).html(v);
+                                itm.find('.' + key).html(value);
                                 break;
                         }
                     });
-                    widgt.append(itm);
+                    list.append(itm);
                 });
             }, 'json');
         },
@@ -162,5 +175,7 @@ $.extend({
 
 
 $(function() {
-    $('#jfhmpf').jfhmpf();
+    $('#jfhmpf').jfhmpf({
+        listPageSize: 10
+    });
 });
