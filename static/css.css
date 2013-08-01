@@ -69,15 +69,16 @@
 }
 
 
-.listBox {
+.listBox, .filesBox {
     border:1px dotted #888;
     padding: 10px;
     margin: 10px;
 }
-.listBox>.list {
+.listBox>.list, .filesBox>.list {
     margin: 0px;
     padding: 0px;
 }
-.listBox>.list>.listItem {
+.listBox>.list>.listItem, .filesBox>.list>.listDirItem, .filesBox>.list>.listFileItem {
     list-style-type: none;
+    cursor: pointer;
 }

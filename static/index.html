@@ -13,7 +13,6 @@
 
       <div class="statusBox">
         <div class="status">
-          <span class="State"></span>
           Track <span class="SongPos"></span> / <span class="PlaylistLength"></span>,
           Consume: <span class="Consume"></span>,
           Random: <span class="Random"></span>,
@@ -21,6 +20,12 @@
           Single: <span class="Single"></span>,
           Consume: <span class="Consume"></span>,
           Bitrate: <span class="Bitrate"></span>
+          <div class="Song">
+            <span class="Artist "></span> -
+            <span class="Album"></span> -
+            <span class="Title"></span>
+            [ <span class="State"></span> ]
+          </div>
           <div class="TimeProgress"><div class="done"></div><div class="notdone"></div></div>
         </div>
       </div>
@@ -36,9 +41,21 @@
       <div class="listBox">
         <ul class="list">
           <li class="listItem">
-            <span class="Artist "></span> -
+            <span class="Artist"></span> -
             <span class="Album"></span> -
             <span class="Title"></span>
+          </li>
+        </ul>
+        <span class="active prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="active nextPage">next</span>
+      </div>
+
+      <div class="filesBox">
+        <ul class="list">
+          <li class="listDirItem">
+            <span class="Directory"></span>
+          </li>
+          <li class="listFileItem">
+            <span class="FilePath"></span>
           </li>
         </ul>
         <span class="active prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="active nextPage">next</span>
