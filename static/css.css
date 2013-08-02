@@ -1,3 +1,6 @@
+* {
+    font-family: sans;
+}
 
 .true, .false {
     display: inline-block;
@@ -33,9 +36,53 @@
 
 .button {
     display: inline-block;
-    background-color: #333;
+    background-color: #666;
     border-radius: 5px;   
     color: #fff;
     padding: 5px 8px;
     cursor: pointer; 
+}
+
+.active {
+    display: inline-block;
+    font-weight: bold;
+    margin-top: 5px;
+    cursor: pointer;
+}
+.active.disabled {
+    color: #aaa;
+    cursor: default;
+}
+
+.statusBox {
+    border: 1px #888;
+    border-style: dotted dotted none dotted;
+    padding: 10px 10px 0 10px;
+    margin: 10px 10px 0 10px;
+}
+
+.actionsBox {
+    border: 1px #888;
+    border-style: none dotted dotted dotted;
+    padding: 10px 10px 10px 10px;
+    margin: 0 10px 10px 10px;
+}
+
+
+.listBox, .filesBox {
+    border:1px dotted #888;
+    padding: 10px;
+    margin: 10px;
+    float: left;
+}
+.listBox>.list, .filesBox>.list {
+    margin: 0px;
+    padding: 0px;
+}
+.listBox>.list>.listItem, .filesBox>.list>.listDirItem, .filesBox>.list>.listFileItem {
+    list-style-type: none;
+    cursor: pointer;
+}
+.current {
+    background-color: #eee;
 }
