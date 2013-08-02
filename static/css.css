@@ -73,6 +73,7 @@
     border:1px dotted #888;
     padding: 10px;
     margin: 10px;
+    float: left;
 }
 .listBox>.list, .filesBox>.list {
     margin: 0px;
@@ -81,4 +82,7 @@
 .listBox>.list>.listItem, .filesBox>.list>.listDirItem, .filesBox>.list>.listFileItem {
     list-style-type: none;
     cursor: pointer;
+}
+.current {
+    background-color: #eee;
 }

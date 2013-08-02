@@ -79,73 +79,60 @@
             var $this = $(this);
                 data = $this.data('jfhmpf'),
                 widget = data.playlist.widget,
-                page = $this.jfhmpf('paginatedList', 'playlist', data.status.mpd_PlaylistLength),
-                list = data.playlist.list,
                 tmpl = data.playlist.listItem;
 
-            $.jget('/list' + '?count=' + data.config.listPageSize + '&start=' + ((page * data.config.listPageSize) + 1), function(r) {
-                widget.find('.listItem').remove();
-                $.each(r, function(i, track) {
-                    var itm = tmpl.clone();
-                    list.append(itm.trackInfo(track).click(function() { $this.jfhmpf('play', track.Id + '')}));
-                });
-            }, 'json');
+            widget.paginatedList(data.config.listPageSize, function(page, pageSize) {
+                var list = $(this);
+                $.jget('/list' + '?count=' + pageSize + '&start=' + ((page * pageSize) + 1), function(r) {
+                    list.find('.listItem').remove();
+                    $.each(r, function(i, track) {
+                        var itm = tmpl.clone();
+                        if(track.Id==data.status.mpd_SongID) {
+                            itm.addClass('current')
+                        }
+                        list.append(itm.trackInfo(track).click(function() { 
+                            $this.jfhmpf('play', track.Id + '');
+                            $this.jfhmpf('status');
+                            $this.jfhmpf('playlist');
+                        }));
+                    });
+                }, 'json');
+
+                return { total:data.status.mpd_PlaylistLength }; // TODO neue hmpf version abwarten
+            });
         },
         files: function(path) {
             var $this = $(this);
                 data = $this.data('jfhmpf'),
                 widget = data.files.widget,
-                page = $this.jfhmpf('paginatedList', 'files', data.files.lastCount),
-                list = data.files.list,
                 tmplDir = data.files.listDirItem,
                 tmplFile = data.files.listFileItem;
 
-            data.files.path = path ? path : (data.files.path ? data.files.path : '');
-
-            // TODO: Add Back
-            $.jget('/files' + data.files.path + '?count=' + data.config.listPageSize + '&start=' + ((page * data.config.listPageSize) + 1), function(r) {
-                widget.find('.listDirItem').add('.listFileItem').remove();
-                $.each(r, function(i, v) {
-                    if(v.Directory) {
-                        var itm = tmplDir.clone();
-                        itm.click(function() { $this.jfhmpf('files', '/' + v.Directory); });
-                        // TODO: Add Dir
-                    } else if(v.Song) {
-                        var itm = tmplFile.clone();
-                        v = v.Song;
-                        // TODO: Add file
+            widget.paginatedList(data.config.listPageSize, function(page, pageSize) {
+                var list = $(this), total;
+                data.files.path = path ? path : '';
+                $.jget('/files' + data.files.path + '?count=' + pageSize + '&start=' + ((page * pageSize) + 1), function(r) {
+                    total = r.length*3; // TODO auf neue hmpf Version warten
+                    $this.data('jfhmpf', data),
+                    list.find('.listDirItem').add('.listFileItem').remove();
+                    if(data.files.path.length) {
+                        r.unshift({ Directory: '..'})
                     }
-                    list.append(itm.trackInfo(v));
-                });
-            }, 'json');
-        },
-        paginatedList: function(type, total) {
-            var $this = $(this);
-                data = $this.data('jfhmpf'),
-                widget = data[type].widget,
-                page = data[type].page ? data[type].page : 0,
-                pages = Math.floor(total / data.config.listPageSize);
-
-            widget.find('.prevPage').unbind('click').addClass('disabled');
-            widget.find('.nextPage').unbind('click').addClass('disabled');
-            if(page>0) {
-                widget.find('.prevPage').click(function() {
-                    data[type].page = page - 1;
-                    $this.data('jfhmpf', data);
-                    $this.jfhmpf(type);
-                }).removeClass('disabled');
-            }
-            if(page<pages) {
-                widget.find('.nextPage').click(function() {
-                    data[type].page = page + 1;
-                    $this.data('jfhmpf', data);
-                    $this.jfhmpf(type);
-                }).removeClass('disabled');
-            }
-            widget.find('.currentPage').html(page + 1);
-            widget.find('.lastPage').html(pages + 1);
-
-            return page;
+                    $.each(r, function(i, v) {
+                        if(v.Directory) {
+                            var itm = tmplDir.clone();
+                            itm.click(function() { $this.jfhmpf('files',  v.Directory=='..' ? path.substr(0, path.lastIndexOf('/')): '/' + v.Directory); });
+                            // TODO: Add Dir
+                        } else if(v.Song) {
+                            var itm = tmplFile.clone();
+                            v = v.Song;
+                            // TODO: Add file
+                        }
+                        list.append(itm.trackInfo(v));
+                    });
+                }, 'json');
+                return { total:total };
+            });
         },
         play: function(song) {
             var $this=$(this);
@@ -196,6 +183,41 @@
             });
             return $this;
         },
+        paginatedList: function(pageSize, listFunc) {
+            var widget = $(this),
+                data = widget.data('paginatedList');
+
+            if(typeof data=='undefined') {
+                data = { page:0 };
+                widget.data('paginatedList', data);
+            }
+            var page = data.page,
+                list = listFunc.apply(widget.find('.list'), [page, pageSize]),
+                pages = Math.floor(list.total / pageSize);
+
+            widget.find('.prevPage').unbind('click').addClass('disabled');
+            widget.find('.nextPage').unbind('click').addClass('disabled');
+
+            if(page>0) {
+                widget.find('.prevPage').click(function() {
+                    data.page = page - 1;
+                    widget.data('paginatedList', data);
+                    widget.paginatedList(pageSize, listFunc);
+                }).removeClass('disabled');
+            }
+            if(page<pages) {
+                widget.find('.nextPage').click(function() {
+                    data.page = page + 1;
+                    widget.data('paginatedList', data);
+                    widget.paginatedList(pageSize, listFunc);
+                }).removeClass('disabled');
+            }
+
+            widget.find('.currentPage').html(page + 1);
+            widget.find('.lastPage').html(pages + 1);
+
+            return widget;
+        }
     });
 })(jQuery);
 
@@ -227,7 +249,6 @@ $.extend({
         return this;
     },
 });
-
 
 $(function() {
     $('#jfhmpf').jfhmpf({
