@@ -16,9 +16,18 @@ import Data.Map.Lazy (Map, mapWithKey, elems)
 import Control.Applicative (optional)
 import Data.Maybe (fromMaybe)
 import Data.HashMap.Strict (insert)
+import qualified Data.List as L
 
 class SimpleReply a where
       simpleReply :: a -> ServerPartT IO Response
+
+data Paginated a = Paginated {
+     start :: Int,
+     count :: Int,
+     total :: Int,
+     result:: [a] }
+
+$(deriveJSON id ''Paginated)
 
 mapping :: ServerPartT IO Response
 mapping = msum [
@@ -32,7 +41,7 @@ mapping = msum [
         dir "previous" previous,
         dir "prev" previous,
         dir "list" playlist,
-        dir "files" $ path filelist,
+        dir "files" $ restPath filelist,
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
         dir "status" $ status,
@@ -41,6 +50,13 @@ mapping = msum [
 
 main :: IO ()
 main = simpleHTTP nullConf mapping
+
+restPath :: (MonadPlus m, FromReqURI a, ServerMonad m) => (a -> m b) -> m b
+restPath handle = do
+     rq <- askRq
+     case rqPaths rq of
+          [] -> mzero
+          x  -> maybe mzero handle (fromReqURI (L.intercalate "/" x))
 
 play :: Maybe Int -> ServerPartT IO Response
 play a = do
@@ -104,7 +120,7 @@ toggle = do
      simpleReply res
 
 playlist :: ServerPartT IO Response
-playlist = msum [ playlistIndex, path (\s->playlistAdd s) ]
+playlist = msum [ playlistIndex, restPath (\s->playlistAdd s) ]
 
 playlistAdd :: MPD.Path -> ServerPartT IO Response
 playlistAdd s = do
@@ -138,7 +154,7 @@ filelist p = do
 
 
 playlists :: ServerPartT IO Response
-playlists = msum [ playlistsIndex, path (\s->playlistsLoad s) ]
+playlists = msum [ playlistsIndex, restPath (\s->playlistsLoad s) ]
 
 playlistsLoad :: MPD.PlaylistName -> ServerPartT IO Response
 playlistsLoad s = do
@@ -167,16 +183,17 @@ instance SimpleReply (MPD.Response ()) where
            Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
            Right yay -> ok $ toResponse $ toJSON yay
 
-paginate :: [a] -> ServerPartT IO [a]
+paginate :: [a] -> ServerPartT IO (Paginated a)
 paginate l = do
         startnum_ <- optional $ lookRead "start"
-        let s = (fromMaybe 1 startnum_) - 1
+        let s = (fromMaybe 0 startnum_)
         msum [withEnd s, withoutEnd s]
         where 
           withEnd s = do
               endnum <- lookRead "count"
-              return $ Prelude.take endnum $ Prelude.drop s l
-          withoutEnd s = return $ Prelude.drop s l
+              let res = Prelude.take endnum $ Prelude.drop s l
+              return $ Paginated { Main.result = res, start=s, Main.count=(Prelude.length res), total=(Prelude.length l) }
+          withoutEnd s = return $ Paginated { Main.result = ( Prelude.drop s l), start=s, Main.count=(Prelude.length l), total=(Prelude.length l) }
 
 instance ToMessage Value where
                    toMessage s = encode s
