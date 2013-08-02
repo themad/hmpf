@@ -36,7 +36,6 @@ mapping = msum [
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
         dir "status" $ status,
-        dir "/" $  status,
         serveDirectory EnableBrowsing ["index.html"] "static"
         ]
 
