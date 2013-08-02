@@ -45,7 +45,8 @@ mapping = msum [
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
         dir "status" $ status,
-        serveDirectory EnableBrowsing ["index.html"] "static"
+        serveDirectory EnableBrowsing ["index.html"] "static",
+        notFound $ toResponse $ ("HTTP file not found (error 404)."::ByteString)
         ]
 
 main :: IO ()
@@ -56,23 +57,26 @@ restPath handle = do
      rq <- askRq
      case rqPaths rq of
           [] -> mzero
-          x  -> maybe mzero handle (fromReqURI (L.intercalate "/" x))
+          x  -> maybe mzero (\s -> localRq (\newRq -> newRq{rqPaths = []}) (handle s)) (fromReqURI (L.intercalate "/" x))
 
 play :: Maybe Int -> ServerPartT IO Response
 play a = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.play a
      simpleReply res
 
 next :: ServerPartT IO Response
 next = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.next
      simpleReply res
 
 previous :: ServerPartT IO Response
 previous = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.previous
      simpleReply res
 
@@ -80,11 +84,14 @@ previous = do
 stop :: ServerPartT IO Response
 stop = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.stop
      simpleReply res
 
 status :: ServerPartT IO Response
 status = do
+     method GET
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.status
      case res of
            Right x -> 
@@ -104,18 +111,21 @@ status = do
 pause :: ServerPartT IO Response
 pause = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.pause True
      simpleReply res
 
 resume :: ServerPartT IO Response
 resume = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPD.pause False
      simpleReply res
 
 toggle :: ServerPartT IO Response
 toggle = do
      method POST
+     nullDir
      res <- liftIO $ MPD.withMPD $ MPDx.toggle
      simpleReply res
 
@@ -125,6 +135,7 @@ playlist = msum [ playlistIndex, restPath (\s->playlistAdd s) ]
 playlistAdd :: MPD.Path -> ServerPartT IO Response
 playlistAdd s = do
          method POST
+         nullDir
          res <- liftIO $ MPD.withMPD $ MPD.add_ s
          case res of
            Left err -> case err of
@@ -137,12 +148,14 @@ playlistAdd s = do
 playlistIndex :: ServerPartT IO Response
 playlistIndex = do
          method GET
+         nullDir
          res <- liftIO $ MPD.withMPD $ MPD.playlistInfo Nothing
          simpleReply res
 
 filelist :: MPD.Path -> ServerPartT IO Response
 filelist p = do
          method GET
+         nullDir
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
          case res of
            Left err -> case err of
@@ -159,12 +172,14 @@ playlists = msum [ playlistsIndex, restPath (\s->playlistsLoad s) ]
 playlistsLoad :: MPD.PlaylistName -> ServerPartT IO Response
 playlistsLoad s = do
          method POST
+         nullDir
          res <- liftIO $ MPD.withMPD $ MPD.load s
          simpleReply res
 
 playlistsIndex :: ServerPartT IO Response
 playlistsIndex = do
          method GET
+         nullDir
          res <- liftIO $ MPD.withMPD $ MPD.listPlaylists
          simpleReply res
 
