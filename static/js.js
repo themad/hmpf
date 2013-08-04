@@ -12,13 +12,14 @@
                     playlist: {
                         widget: $this.find('.listBox'),
                         list: $this.find('.listBox .list'),
-                        listItem: $this.find('.listBox .list .listItem').detach(),
+                        listItem: $this.find('.listBox .list .item').detach(),
                     },
                     files: {
                         widget: $this.find('.filesBox'),
                         list: $this.find('.filesBox .list'),
-                        listDirItem: $this.find('.filesBox .list .listDirItem').detach(),
-                        listFileItem: $this.find('.filesBox .list .listFileItem').detach(),
+                        crumbs: $this.find('.filesBox .pathCrumbs'),
+                        listDirItem: $this.find('.filesBox .list .item.path').detach(),
+                        listFileItem: $this.find('.filesBox .list .item.file').detach()
                     },
                     config: {}
                 };
@@ -30,9 +31,9 @@
                     $this.find('.' + s).click(function() {$this.jfhmpf(s)});
                 });
 
-                if(data['status'].widget.length) {
-                    data.status.interval = setInterval(function() { $(this).jfhmpf('status') }, data.config.statusInterval);
-                }
+                // if(data['status'].widget.length) {
+                //     data.status.interval = setInterval(function() { $(this).jfhmpf('status') }, data.config.statusInterval);
+                // }
 
                 $this.data('jfhmpf', data);
             }
@@ -62,7 +63,7 @@
                             $.each(value, function(state) { stt.html(state); });
                             break;
                         case 'Song':
-                            widget.find('.Song').trackInfo(value);
+                            if(value) widget.find('.Song').trackInfo(value);
                             break;
                         case 'Consume':case 'Random':case 'Repeat': case 'Single': case 'Consume':
                             widget.find('.' + key).addClass(value ? 'true' : 'false')
@@ -74,64 +75,45 @@
                 });
                 $(this).data('jfhmpf', data);
             });
+            // TODO: on trackchange refreh playlist
         },
         playlist: function() {
             var $this = $(this);
-                data = $this.data('jfhmpf'),
-                widget = data.playlist.widget,
-                tmpl = data.playlist.listItem;
+                data = $this.data('jfhmpf');
 
-            widget.paginatedList(data.config.listPageSize, function(page, pageSize) {
-                var list = $(this);
-                $.jget('/list' + '?count=' + pageSize + '&start=' + ((page * pageSize) + 1), function(r) {
-                    list.find('.listItem').remove();
-                    $.each(r, function(i, track) {
-                        var itm = tmpl.clone();
-                        if(track.Id==data.status.mpd_SongID) {
-                            itm.addClass('current')
-                        }
-                        list.append(itm.trackInfo(track).click(function() { 
-                            $this.jfhmpf('play', track.Id + '');
-                            $this.jfhmpf('status');
-                            $this.jfhmpf('playlist');
-                        }));
-                    });
-                }, 'json');
-
-                return { total:data.status.mpd_PlaylistLength }; // TODO neue hmpf version abwarten
+            data.playlist.widget.paginatedList('/list', data.config.listPageSize, function(track) {
+                var itm = data.playlist.listItem.clone();
+                if(track.Id==data.status.mpd_SongID) {
+                    itm.addClass('current')
+                }
+                $(this).append(itm.trackInfo(track).click(function() { $this.jfhmpf('play', track.Index + ''); }));
             });
         },
         files: function(path) {
             var $this = $(this);
                 data = $this.data('jfhmpf'),
-                widget = data.files.widget,
-                tmplDir = data.files.listDirItem,
-                tmplFile = data.files.listFileItem;
-
-            widget.paginatedList(data.config.listPageSize, function(page, pageSize) {
-                var list = $(this), total;
                 data.files.path = path ? path : '';
-                $.jget('/files' + data.files.path + '?count=' + pageSize + '&start=' + ((page * pageSize) + 1), function(r) {
-                    total = r.length*3; // TODO auf neue hmpf Version warten
-                    $this.data('jfhmpf', data),
-                    list.find('.listDirItem').add('.listFileItem').remove();
-                    if(data.files.path.length) {
-                        r.unshift({ Directory: '..'})
-                    }
-                    $.each(r, function(i, v) {
-                        if(v.Directory) {
-                            var itm = tmplDir.clone();
-                            itm.click(function() { $this.jfhmpf('files',  v.Directory=='..' ? path.substr(0, path.lastIndexOf('/')): '/' + v.Directory); });
-                            // TODO: Add Dir
-                        } else if(v.Song) {
-                            var itm = tmplFile.clone();
-                            v = v.Song;
-                            // TODO: Add file
-                        }
-                        list.append(itm.trackInfo(v));
-                    });
-                }, 'json');
-                return { total:total };
+
+            data.files.crumbs.pathCrumbs(data.files.path, function(path) { $this.jfhmpf('files', path); });
+
+            data.files.widget.paginatedList('/files' + data.files.path, data.config.listPageSize, function(file) {
+                $this.data('jfhmpf', data);
+
+                if(file.Directory) {
+                    var itm = data.files.listDirItem.clone(),
+                        add = file.Directory;
+                    itm.find('.changeDir').click(function() { $this.jfhmpf('files',  file.Directory=='..' ? path.substr(0, path.lastIndexOf('/')): '/' + file.Directory); });
+                    file.File = file.Directory.substring(file.Directory.lastIndexOf('/') + 1);
+                } else if(file.Song) {
+                    var itm = data.files.listFileItem.clone(),
+                        add = file.Song.FilePath;
+                    file = file.Song;
+                    file.FileName = file.FilePath.substring(file.FilePath.lastIndexOf('/') + 1);
+                }
+                itm.find('.addToPlaylist').click(function() {
+                    $this.jfhmpf('addToPlaylist', add);
+                });
+                $(this).append(itm.trackInfo(file));
             });
         },
         play: function(song) {
@@ -139,6 +121,8 @@
             $.jpost('/play' + (song ? '/' + song : ''), {}, function() {
 
             });
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
         },
         toggle: function() {
             var $this=$(this);
@@ -150,13 +134,25 @@
             $.jpost('/previous', {}, function() {
 
             });
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
         },
         next: function() {
             var $this=$(this);
             $.jpost('/next', {}, function() {
 
             });
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
         },
+        addToPlaylist: function(item) {
+            var $this=$(this);
+            $.jpost('/list/' + encodeURI(item), {}, function() {
+
+            });            
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
+        }
     };
 
     $.fn.extend({
@@ -183,39 +179,65 @@
             });
             return $this;
         },
-        paginatedList: function(pageSize, listFunc) {
+        paginatedList: function(uri, pageSize, listFunc) {
             var widget = $(this),
-                data = widget.data('paginatedList');
+                data = widget.data('paginatedList'),
+                page;
 
             if(typeof data=='undefined') {
                 data = { page:0 };
                 widget.data('paginatedList', data);
             }
-            var page = data.page,
-                list = listFunc.apply(widget.find('.list'), [page, pageSize]),
-                pages = Math.floor(list.total / pageSize);
+            page = data.page;
 
-            widget.find('.prevPage').unbind('click').addClass('disabled');
-            widget.find('.nextPage').unbind('click').addClass('disabled');
+            $.jget(uri + '?count=' + pageSize + '&start=' + (page * pageSize), function(r) {
+                var pages = Math.floor(r.total / pageSize);
+                widget.find('.list .item').remove();
 
-            if(page>0) {
-                widget.find('.prevPage').click(function() {
-                    data.page = page - 1;
-                    widget.data('paginatedList', data);
-                    widget.paginatedList(pageSize, listFunc);
-                }).removeClass('disabled');
-            }
-            if(page<pages) {
-                widget.find('.nextPage').click(function() {
-                    data.page = page + 1;
-                    widget.data('paginatedList', data);
-                    widget.paginatedList(pageSize, listFunc);
-                }).removeClass('disabled');
-            }
+                $.each(r.result, function(i, item) {
+                    listFunc.apply(widget.find('.list'), [item]);
+                });
 
-            widget.find('.currentPage').html(page + 1);
-            widget.find('.lastPage').html(pages + 1);
+                widget.find('.prevPage').unbind('click').addClass('disabled');
+                widget.find('.nextPage').unbind('click').addClass('disabled');
 
+                if(page>0) {
+                    widget.find('.prevPage').click(function() {
+                        data.page = page - 1;
+                        widget.data('paginatedList', data);
+                        widget.paginatedList(uri, pageSize, listFunc);
+                    }).removeClass('disabled');
+                }
+                if(page<pages) {
+                    widget.find('.nextPage').click(function() {
+                        data.page = page + 1;
+                        widget.data('paginatedList', data);
+                        widget.paginatedList(uri, pageSize, listFunc);
+                    }).removeClass('disabled');
+                }
+
+                widget.find('.currentPage').html(page + 1);
+                widget.find('.lastPage').html(pages + 1);
+            }, 'json');
+
+            return widget;
+        },
+        pathCrumbs: function (path, func) {
+            var widget = $(this),
+                crumbs = ('root' + path).split('/'),
+                path = '';
+            widget.html('/');//find('.crumb').remove();
+            $.each(crumbs, function(i, crumb) {
+                var itm = $('<span class="crumb"></span>');
+                widget.append(itm.html(crumb));
+                if(i<(crumbs.length-1)) {
+                    path += i==0 ? '' : '/' + crumb;
+                    itm.click(func.bind(itm, [path]));
+                    widget.append('/');
+                } else {
+                    itm.addClass('selected');
+                }
+            });
             return widget;
         }
     });
@@ -224,7 +246,7 @@
 $.extend({
     jget: function(url, func) {
         $.ajax({
-            async: false,
+            async: true,
             dataType: 'json',
             success: function(r) {
                 func(r);
@@ -236,7 +258,7 @@ $.extend({
     },
     jpost: function(url, data, func) {
         $.ajax({
-            async: false,
+            async: true,
             type: 'POST',
             dataType: 'json',
             success: function(r) {

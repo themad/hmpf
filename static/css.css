@@ -79,7 +79,20 @@
     margin: 0px;
     padding: 0px;
 }
-.listBox>.list>.listItem, .filesBox>.list>.listDirItem, .filesBox>.list>.listFileItem {
+.filesBox>.pathCrumbs {
+    padding-bottom: 8px;
+}
+.filesBox>.pathCrumbs>.crumb {
+    font-style: italic;
+    color: #aaa;    
+    cursor: pointer;
+}
+.filesBox>.pathCrumbs>.selected {
+    font-style: normal;
+    color: #000;
+    cursor: default;
+}
+.list>.item {
     list-style-type: none;
     cursor: pointer;
 }
