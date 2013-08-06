@@ -19,7 +19,8 @@
                         list: $this.find('.filesBox .list'),
                         crumbs: $this.find('.filesBox .pathCrumbs'),
                         listDirItem: $this.find('.filesBox .list .item.path').detach(),
-                        listFileItem: $this.find('.filesBox .list .item.file').detach()
+                        listFileItem: $this.find('.filesBox .list .item.file').detach(),
+                        listPlaylistItem: $this.find('.filesBox .list .item.playlist').detach()
                     },
                     config: {}
                 };
@@ -67,7 +68,9 @@
                             if(value) widget.find('.Song').trackInfo(value);
                             break;
                         case 'Consume':case 'Random':case 'Repeat': case 'Single': case 'Consume':
-                            widget.find('.' + key).addClass(value ? 'true' : 'false');
+                            widget.find('.' + key).removeClass(!value ? 'true' : 'false').addClass(value ? 'true' : 'false').unbind('click').click(function() {
+                                $this.jfhmpf('statusToggle', key)
+                            });
                             break;
                         default:
                             widget.find('.' + key).html(value);
@@ -81,6 +84,14 @@
                 $this.data('jfhmpf', data);
             });
         },
+        statusToggle: function(key) {
+            var $this = $(this);
+                data = $this.data('jfhmpf'),
+                p = {};
+            p[key] = !data.status['mpd_' + key];
+            $.jpost('/status', p);
+            $this.jfhmpf('status');
+        },
         playlist: function() {
             var $this = $(this);
                 data = $this.data('jfhmpf');
@@ -90,8 +101,11 @@
                 if(track.Id==data.status.mpd_SongID) {
                     itm.addClass('current')
                 }
-                $(this).append(itm.trackInfo(track).click(function() { $this.jfhmpf('play', track.Index + ''); }));
+                $(this).append(itm.trackInfo(track));
+                itm.find('.playSong').click(function() { $this.jfhmpf('play', track.Index + ''); });
+                itm.find('.removeFromPlaylist').click(function() { $this.jfhmpf('delete', track.Index + ''); });
             });
+            $this.find('.clearList').unbind('click').click(function() { $this.jfhmpf('clear'); });
         },
         files: function(path) {
             var $this = $(this);
@@ -113,6 +127,10 @@
                         add = file.Song.FilePath;
                     file = file.Song;
                     file.FileName = file.FilePath.substring(file.FilePath.lastIndexOf('/') + 1);
+                } else if(file.Playlist) {
+                    var itm = data.files.listPlaylistItem.clone(),
+                        add = file.Playlist;
+                    file.File = file.Playlist.substring(file.Playlist.lastIndexOf('/') + 1);
                 }
                 itm.find('.addToPlaylist').click(function() {
                     $this.jfhmpf('addToPlaylist', add);
@@ -122,35 +140,38 @@
         },
         play: function(song) {
             var $this=$(this);
-            $.jpost('/play' + (song ? '/' + song : ''), {}, function() {
-
-            });
+            $.jpost('/play' + (song ? '/' + song : ''), {});
             $this.jfhmpf('status');
+        },
+        delete: function(song) {
+            var $this=$(this);
+            $.jpost('/delete' + (song ? '/' + song : ''), {});
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
+        },
+        clear: function() {
+            var $this=$(this);
+            $.jpost('/clear', {});
+            $this.jfhmpf('status');
+            $this.jfhmpf('playlist');
         },
         toggle: function() {
             var $this=$(this);
-            $.jpost('/toggle', {}, function() {
-            });
+            $.jpost('/toggle', {});
         },
         prev: function() {
             var $this=$(this);
-            $.jpost('/previous', {}, function() {
-
-            });
+            $.jpost('/previous', {});
             $this.jfhmpf('status');
         },
         next: function() {
             var $this=$(this);
-            $.jpost('/next', {}, function() {
-
-            });
+            $.jpost('/next', {});
             $this.jfhmpf('status');
         },
         addToPlaylist: function(item) {
             var $this=$(this);
-            $.jpost('/list/' + encodeURI(item), {}, function() {
-
-            });            
+            $.jpost('/list/' + encodeURI(item), {});
             $this.jfhmpf('status');
             $this.jfhmpf('playlist');
         }
@@ -247,7 +268,7 @@
 $.extend({
     jget: function(url, func) {
         $.ajax({
-            async: true,
+            async: false,
             dataType: 'json',
             success: function(r) {
                 func(r);
@@ -263,7 +284,7 @@ $.extend({
             type: 'POST',
             dataType: 'json',
             success: function(r) {
-                func(r);
+                if(typeof fucn=='function') func(r);
             },
             url: url,
             data: data

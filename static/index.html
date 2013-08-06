@@ -14,11 +14,10 @@
       <div class="statusBox">
         <div class="status">
           Track <span class="SongPos"></span> / <span class="PlaylistLength"></span>,
-          Consume: <span class="Consume"></span>,
-          Random: <span class="Random"></span>,
-          Repeat: <span class="Repeat"></span>,
-          Single: <span class="Single"></span>,
-          Consume: <span class="Consume"></span>,
+          Consume: <span class="Consume statusButton"></span>,
+          Random: <span class="Random statusButton"></span>,
+          Repeat: <span class="Repeat statusButton"></span>,
+          Single: <span class="Single statusButton"></span>,
           Bitrate: <span class="Bitrate"></span>
           <div class="Song">
             <span class="Artist "></span> -
@@ -41,25 +40,36 @@
       <div class="listBox">
         <ul class="list">
           <li class="item">
-            <span class="Artist"></span> -
-            <span class="Album"></span> -
-            <span class="Title"></span>
+            <span class="playSong">
+              <span class="Artist"></span> -
+              <span class="Album"></span> -
+              <span class="Title"></span>
+            </span>
+            <span class="removeFromPlaylist listButton">del</span>
           </li>
         </ul>
-        <span class="active prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="active nextPage">next</span>
+        <div class="buttons">
+          <span class="button prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="button nextPage">next</span>
+          <span class="clearList button">clear</span>
+        </div>
       </div>
 
       <div class="filesBox">
         <div class="pathCrumbs"></div>
         <ul class="list">
           <li class="item path">
-            <span class="File changeDir"></span> <span class="addToPlaylist addToPlaylistButton">add</span>
+            <span class="File changeDir"></span> <span class="addToPlaylist listButton">add</span>
           </li>
           <li class="item file">
             <span class="FileName addToPlaylist"></span>
           </li>
+          <li class="item playlist">
+            <span class="Playlist addToPlaylist"></span>
+          </li>
         </ul>
-        <span class="active prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="active nextPage">next</span>
+        <div class="buttons">
+          <span class="button prevPage">prev</span> <span class="currentPage"></span> / <span class="lastPage"></span> <span class="button nextPage">next</span>
+        </div>
       </div>
 
     </div>

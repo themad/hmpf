@@ -92,15 +92,19 @@
     color: #000;
     cursor: default;
 }
+.listBox>.buttons, .filesBox>.buttons {
+    margin-top:8px;
+}
 .list>.item {
     list-style-type: none;
     cursor: pointer;
     clear:both;
 }
 .current {
-    background-color: #eee;
+    color: #52f;
+    font-weight:bold;
 }
-.addToPlaylistButton {
+.listButton {
     float: right;
     margin-left: 14px;
     border-radius: 4px;
