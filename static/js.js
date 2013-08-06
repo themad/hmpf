@@ -37,6 +37,10 @@
                 }
 
                 $this.data('jfhmpf', data);
+
+                data.status.widget.find('.TimeProgress').click(function(e) {
+                    $this.jfhmpf('statusToggle', 'Time', (e.pageX - this.offsetLeft) / $(this).width() );
+                });
             }
             $.each(['status', 'playlist', 'files'], function(i, s) {
                 if(data[s].widget.length) $this.jfhmpf(s);
@@ -84,11 +88,15 @@
                 $this.data('jfhmpf', data);
             });
         },
-        statusToggle: function(key) {
+        statusToggle: function(key, value) {
             var $this = $(this);
                 data = $this.data('jfhmpf'),
                 p = {};
-            p[key] = !data.status['mpd_' + key];
+            if(key=='Time') {
+                p[key] = Math.round(value * data.status.mpd_Time[1]);
+            } else {
+                p[key] = !data.status['mpd_' + key];
+            }
             $.jpost('/status', p);
             $this.jfhmpf('status');
         },
