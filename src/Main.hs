@@ -89,10 +89,7 @@ stop = do
      simpleReply res
 
 status :: ServerPartT IO Response
-status = getStatus -- `mplus` setStatus
-
-getStatus :: ServerPartT IO Response
-getStatus = do
+status = do
      decodeBody (defaultBodyPolicy "/tmp/" 4096 4096 4096)
      optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle]
      res <- liftIO $ MPD.withMPD $ MPD.status
@@ -111,38 +108,35 @@ getStatus = do
 setCrossfade :: ServerPartT IO Response
 setCrossfade = do
      method POST
-     value <- lookRead "crossfade"
+     value <- lookRead "Crossfade"
      res <- liftIO $ MPD.withMPD $ MPD.crossfade value
      mzero
 
 setRepeat :: ServerPartT IO Response
 setRepeat = do
      method POST
-     value <- lookRead "repeat"
+     value <- lookRead "Repeat"
      res <- liftIO $ MPD.withMPD $ MPD.repeat value
      mzero
 
 setSingle :: ServerPartT IO Response
 setSingle = do
      method POST
-     value <- lookRead "single"
+     value <- lookRead "Single"
      res <- liftIO $ MPD.withMPD $ MPD.single value
      mzero
 
 setRandom :: ServerPartT IO Response
 setRandom = do
      method POST
-     value <- lookRead "random"
+     value <- lookRead "Random"
      res <- liftIO $ MPD.withMPD $ MPD.random value
      mzero
 
 setConsume :: ServerPartT IO Response
 setConsume = do
-     liftIO $ Prelude.putStrLn "Debug a..."
      method POST
-     liftIO $ Prelude.putStrLn "Consuming..."
-     value <- lookRead "consume"
-     liftIO $ Prelude.putStrLn "Consumed!"
+     value <- lookRead "Consume"
      res <- liftIO $ MPD.withMPD $ MPD.consume value
      mzero
 
