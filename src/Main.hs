@@ -37,6 +37,7 @@ mapping = msum [
         dir "stop" stop,
         dir "toggle" toggle,
         dir "shuffle" shuffle,
+        dir "seek" $ path seek,
         dir "clear" clear,
         dir "resume" resume,
         dir "pause" pause,
@@ -68,6 +69,18 @@ play a = do
      nullDir
      res <- liftIO $ MPD.withMPD $ MPD.play a
      simpleReply res
+
+seek :: Integer -> ServerPartT IO Response
+seek a = do
+     method POST
+     nullDir
+     state <- liftIO $ MPD.withMPD $ MPD.status
+     case state of
+          Right MPD.Status{MPD.stSongPos=r} -> do
+                case r of 
+                     Just song -> simpleReply =<< (liftIO $ MPD.withMPD $ MPD.seek song a)
+                     _ -> badRequest $ toResponse $ toJSON (object ["Error" .= String "Not currently playing a song"]) 
+          _ -> simpleReply state
 
 shuffle :: ServerPartT IO Response
 shuffle = do
@@ -115,7 +128,7 @@ stop = do
 status :: ServerPartT IO Response
 status = do
      decodeBody (defaultBodyPolicy "/tmp/" 4096 4096 4096)
-     _ <- optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle]
+     _ <- optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle, setSeek]
      res <- liftIO $ MPD.withMPD $ MPD.status
      case res of
            Right x -> do
@@ -163,6 +176,18 @@ setConsume = do
      value <- lookRead "Consume"
      _ <- liftIO $ MPD.withMPD $ MPD.consume value
      mzero
+
+setSeek :: ServerPartT IO Response
+setSeek = do
+     method POST
+     value <- lookRead "Time"
+     state <- liftIO $ MPD.withMPD $ MPD.status
+     case state of
+          Right MPD.Status{MPD.stSongPos=r} -> do
+                case r of 
+                     Just song -> simpleReply =<< (liftIO $ MPD.withMPD $ MPD.seek song value)
+                     _ -> mzero
+          _ -> mzero
 
 pause :: ServerPartT IO Response
 pause = do
@@ -241,17 +266,17 @@ playlistsIndex = do
 
 instance SimpleReply (MPD.Response MPD.Status) where
          simpleReply a = case a of
-           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Left err -> badRequest $ toResponse $ toJSON (object ["Error" .= err])
            Right yay -> ok $ toResponse $ toJSON yay
            
 instance (ToJSON x) => SimpleReply (MPD.Response [x]) where
          simpleReply a = case a of
-           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Left err -> badRequest $ toResponse $ toJSON (object ["Error" .= err])
            Right yay -> paginate yay >>= ok . toResponse . toJSON
 
 instance SimpleReply (MPD.Response ()) where
          simpleReply a = case a of
-           Left err -> internalServerError $ toResponse $ toJSON (object ["Error" .= err])
+           Left err -> badRequest $ toResponse $ toJSON (object ["Error" .= err])
            Right yay -> ok $ toResponse $ toJSON yay
 
 paginate :: [a] -> ServerPartT IO (Paginated a)
