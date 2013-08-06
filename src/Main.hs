@@ -33,8 +33,11 @@ mapping :: ServerPartT IO Response
 mapping = msum [
         dir "play" $ path (\s->play $ Just s),
         dir "play" $ play Nothing,
+        dir "delete" $ path delete,
         dir "stop" stop,
         dir "toggle" toggle,
+        dir "shuffle" shuffle,
+        dir "clear" clear,
         dir "resume" resume,
         dir "pause" pause,
         dir "next" next,
@@ -46,7 +49,7 @@ mapping = msum [
         dir "playlists" $ playlists,
         dir "status" $ status,
         serveDirectory EnableBrowsing ["index.html"] "static",
-        notFound $ toResponse $ ("HTTP file not found (error 404)."::ByteString)
+        notFound $ toResponse $ ("hmpf: HTTP file not found (error 404)."::ByteString)
         ]
 
 main :: IO ()
@@ -64,6 +67,27 @@ play a = do
      method POST
      nullDir
      res <- liftIO $ MPD.withMPD $ MPD.play a
+     simpleReply res
+
+shuffle :: ServerPartT IO Response
+shuffle = do
+     method POST
+     nullDir
+     res <- liftIO $ MPD.withMPD $ MPD.shuffle Nothing
+     simpleReply res
+
+delete :: Int -> ServerPartT IO Response
+delete a = do
+     method POST
+     nullDir
+     res <- liftIO $ MPD.withMPD $ MPD.delete a
+     simpleReply res
+
+clear :: ServerPartT IO Response
+clear = do
+     method POST
+     nullDir
+     res <- liftIO $ MPD.withMPD $ MPD.clear
      simpleReply res
 
 next :: ServerPartT IO Response
@@ -91,7 +115,7 @@ stop = do
 status :: ServerPartT IO Response
 status = do
      decodeBody (defaultBodyPolicy "/tmp/" 4096 4096 4096)
-     optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle]
+     _ <- optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle]
      res <- liftIO $ MPD.withMPD $ MPD.status
      case res of
            Right x -> do
@@ -109,35 +133,35 @@ setCrossfade :: ServerPartT IO Response
 setCrossfade = do
      method POST
      value <- lookRead "Crossfade"
-     res <- liftIO $ MPD.withMPD $ MPD.crossfade value
+     _ <- liftIO $ MPD.withMPD $ MPD.crossfade value
      mzero
 
 setRepeat :: ServerPartT IO Response
 setRepeat = do
      method POST
      value <- lookRead "Repeat"
-     res <- liftIO $ MPD.withMPD $ MPD.repeat value
+     _ <- liftIO $ MPD.withMPD $ MPD.repeat value
      mzero
 
 setSingle :: ServerPartT IO Response
 setSingle = do
      method POST
      value <- lookRead "Single"
-     res <- liftIO $ MPD.withMPD $ MPD.single value
+     _ <- liftIO $ MPD.withMPD $ MPD.single value
      mzero
 
 setRandom :: ServerPartT IO Response
 setRandom = do
      method POST
      value <- lookRead "Random"
-     res <- liftIO $ MPD.withMPD $ MPD.random value
+     _ <- liftIO $ MPD.withMPD $ MPD.random value
      mzero
 
 setConsume :: ServerPartT IO Response
 setConsume = do
      method POST
      value <- lookRead "Consume"
-     res <- liftIO $ MPD.withMPD $ MPD.consume value
+     _ <- liftIO $ MPD.withMPD $ MPD.consume value
      mzero
 
 pause :: ServerPartT IO Response
@@ -175,7 +199,7 @@ playlistAdd s = do
                     MPD.FileNotFound -> notFound $ toResponse $ toJSON (object ["Error" .= err])
                     _ -> simpleReply res
                 _ -> simpleReply res
-           Right yay -> simpleReply res
+           _ -> simpleReply res
 
 playlistIndex :: ServerPartT IO Response
 playlistIndex = do
@@ -191,11 +215,11 @@ filelist p = do
          res <- liftIO $ MPD.withMPD $ MPD.lsInfo p
          case res of
            Left err -> case err of
-                MPD.ACK a s -> case a of
+                MPD.ACK a _ -> case a of
                     MPD.FileNotFound -> notFound $ toResponse $ toJSON (object ["Error" .= err])
                     _ -> simpleReply res
                 _ -> simpleReply res
-           Right yay -> simpleReply res
+           _ -> simpleReply res
 
 
 playlists :: ServerPartT IO Response
