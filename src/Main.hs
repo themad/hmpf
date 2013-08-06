@@ -50,7 +50,7 @@ mapping = msum [
         ]
 
 main :: IO ()
-main = simpleHTTP nullConf mapping
+main = Prelude.putStrLn "Starting server..." >>  simpleHTTP nullConf mapping
 
 restPath :: (MonadPlus m, FromReqURI a, ServerMonad m) => (a -> m b) -> m b
 restPath handle = do
@@ -89,24 +89,62 @@ stop = do
      simpleReply res
 
 status :: ServerPartT IO Response
-status = do
-     method GET
-     nullDir
+status = getStatus -- `mplus` setStatus
+
+getStatus :: ServerPartT IO Response
+getStatus = do
+     decodeBody (defaultBodyPolicy "/tmp/" 4096 4096 4096)
+     optional $ msum [setCrossfade, setRandom, setRepeat, setConsume, setSingle]
      res <- liftIO $ MPD.withMPD $ MPD.status
      case res of
-           Right x -> 
-             case (MPD.stSongID x) of
-               Nothing -> simpleReply res
-               Just a  -> do
-                    songinfo <- liftIO $ MPD.withMPD $ MPD.playlistId $ Just a
-                    case songinfo of
-                      Right [s] -> ok $ toResponse $ combine x (toJSON s)
-                      _ -> ok $ toResponse $ combine x Null
+           Right x -> do
+             songinfo <- liftIO $ MPD.withMPD $ MPD.currentSong
+             case songinfo of
+                  (Right (Just s)) -> ok $ toResponse $ combine x (toJSON s)
+                  _ -> ok $ toResponse $ combine x Null
            _ -> simpleReply res
      where 
            combine a b = case toJSON a of 
                    Object o -> Object $ insert "Song" b o
                    _ -> toJSON a
+
+setCrossfade :: ServerPartT IO Response
+setCrossfade = do
+     method POST
+     value <- lookRead "crossfade"
+     res <- liftIO $ MPD.withMPD $ MPD.crossfade value
+     mzero
+
+setRepeat :: ServerPartT IO Response
+setRepeat = do
+     method POST
+     value <- lookRead "repeat"
+     res <- liftIO $ MPD.withMPD $ MPD.repeat value
+     mzero
+
+setSingle :: ServerPartT IO Response
+setSingle = do
+     method POST
+     value <- lookRead "single"
+     res <- liftIO $ MPD.withMPD $ MPD.single value
+     mzero
+
+setRandom :: ServerPartT IO Response
+setRandom = do
+     method POST
+     value <- lookRead "random"
+     res <- liftIO $ MPD.withMPD $ MPD.random value
+     mzero
+
+setConsume :: ServerPartT IO Response
+setConsume = do
+     liftIO $ Prelude.putStrLn "Debug a..."
+     method POST
+     liftIO $ Prelude.putStrLn "Consuming..."
+     value <- lookRead "consume"
+     liftIO $ Prelude.putStrLn "Consumed!"
+     res <- liftIO $ MPD.withMPD $ MPD.consume value
+     mzero
 
 pause :: ServerPartT IO Response
 pause = do
@@ -130,7 +168,7 @@ toggle = do
      simpleReply res
 
 playlist :: ServerPartT IO Response
-playlist = msum [ playlistIndex, restPath (\s->playlistAdd s) ]
+playlist = msum [ playlistIndex, restPath playlistAdd ]
 
 playlistAdd :: MPD.Path -> ServerPartT IO Response
 playlistAdd s = do
@@ -167,7 +205,7 @@ filelist p = do
 
 
 playlists :: ServerPartT IO Response
-playlists = msum [ playlistsIndex, restPath (\s->playlistsLoad s) ]
+playlists = msum [ playlistsIndex, restPath playlistsLoad ]
 
 playlistsLoad :: MPD.PlaylistName -> ServerPartT IO Response
 playlistsLoad s = do
