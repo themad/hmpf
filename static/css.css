@@ -10,7 +10,7 @@
 }
 .true {
     border: 2px solid #47e;
-    background-color: #4e7;
+    background-color: #555;
     border-radius: 5px;
 }
 .false {
@@ -95,7 +95,16 @@
 .list>.item {
     list-style-type: none;
     cursor: pointer;
+    clear:both;
 }
 .current {
     background-color: #eee;
+}
+.addToPlaylistButton {
+    float: right;
+    margin-left: 14px;
+    border-radius: 4px;
+    padding: 2px 6px 1px 3px;
+    background-color: #eee;
+    font-size: 10px;
 }

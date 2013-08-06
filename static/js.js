@@ -28,12 +28,12 @@
                 }
 
                 $.each(['toggle', 'prev', 'next'], function(i, s) {
-                    $this.find('.' + s).click(function() {$this.jfhmpf(s)});
+                    $this.find('.' + s).click(function() { $this.jfhmpf(s) });
                 });
 
-                // if(data['status'].widget.length) {
-                //     data.status.interval = setInterval(function() { $(this).jfhmpf('status') }, data.config.statusInterval);
-                // }
+                if(data['status'].widget.length) {
+                    data.status.interval = setInterval(function() { $this.jfhmpf('status') }, data.config.statusInterval);
+                }
 
                 $this.data('jfhmpf', data);
             }
@@ -44,7 +44,8 @@
             return this;
         },
         status: function() {
-            var data = $(this).data('jfhmpf'),
+            var $this = $(this),
+                data = $this.data('jfhmpf'),
                 widget = data.status.widget;
 
             $.jget('/status', function(r) {
@@ -66,16 +67,19 @@
                             if(value) widget.find('.Song').trackInfo(value);
                             break;
                         case 'Consume':case 'Random':case 'Repeat': case 'Single': case 'Consume':
-                            widget.find('.' + key).addClass(value ? 'true' : 'false')
+                            widget.find('.' + key).addClass(value ? 'true' : 'false');
                             break;
                         default:
                             widget.find('.' + key).html(value);
                             break;
                     }
+                    if(data.status.lastSongId != data.status.mpd_SongID) {
+                        if(data.status.lastSongId) $this.jfhmpf('playlist');
+                        data.status.lastSongId = data.status.mpd_SongID;
+                    }
                 });
-                $(this).data('jfhmpf', data);
+                $this.data('jfhmpf', data);
             });
-            // TODO: on trackchange refreh playlist
         },
         playlist: function() {
             var $this = $(this);
@@ -122,7 +126,6 @@
 
             });
             $this.jfhmpf('status');
-            $this.jfhmpf('playlist');
         },
         toggle: function() {
             var $this=$(this);
@@ -135,7 +138,6 @@
 
             });
             $this.jfhmpf('status');
-            $this.jfhmpf('playlist');
         },
         next: function() {
             var $this=$(this);
@@ -143,7 +145,6 @@
 
             });
             $this.jfhmpf('status');
-            $this.jfhmpf('playlist');
         },
         addToPlaylist: function(item) {
             var $this=$(this);
@@ -218,7 +219,7 @@
 
                 widget.find('.currentPage').html(page + 1);
                 widget.find('.lastPage').html(pages + 1);
-            }, 'json');
+            });
 
             return widget;
         },
