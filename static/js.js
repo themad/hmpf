@@ -279,7 +279,7 @@ $.extend({
             async: false,
             dataType: 'json',
             success: function(r) {
-                func(r);
+                if(typeof func=='function') func(r);
             },
             url: url
         });
@@ -292,7 +292,7 @@ $.extend({
             type: 'POST',
             dataType: 'json',
             success: function(r) {
-                if(typeof fucn=='function') func(r);
+                if(typeof func=='function') func(r);
             },
             url: url,
             data: data
