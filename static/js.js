@@ -32,7 +32,7 @@
                     $this.find('.' + s).click(function() { $this.jfhmpf(s) });
                 });
 
-                if(data['status'].widget.length) {
+                if(data['status'].widget.length && data.config.statusInterval>0) {
                     data.status.interval = setInterval(function() { $this.jfhmpf('status') }, data.config.statusInterval);
                 }
 
@@ -115,12 +115,12 @@
             });
             $this.find('.clearList').unbind('click').click(function() { $this.jfhmpf('clear'); });
         },
-        files: function(path) {
+        files: function(path, resetPagination) {
             var $this = $(this);
                 data = $this.data('jfhmpf'),
                 data.files.path = path ? path : '';
 
-            data.files.crumbs.pathCrumbs(data.files.path, function(path) { $this.jfhmpf('files', path); });
+            data.files.crumbs.pathCrumbs(data.files.path, function(path) { $this.jfhmpf('files', path, true); });
 
             data.files.widget.paginatedList('/files' + data.files.path, data.config.listPageSize, function(file) {
                 $this.data('jfhmpf', data);
@@ -128,7 +128,7 @@
                 if(file.Directory) {
                     var itm = data.files.listDirItem.clone(),
                         add = file.Directory;
-                    itm.find('.changeDir').click(function() { $this.jfhmpf('files',  file.Directory=='..' ? path.substr(0, path.lastIndexOf('/')): '/' + file.Directory); });
+                    itm.find('.changeDir').click(function() { $this.jfhmpf('files',  file.Directory=='..' ? path.substr(0, path.lastIndexOf('/')): '/' + file.Directory, true); });
                     file.File = file.Directory.substring(file.Directory.lastIndexOf('/') + 1);
                 } else if(file.Song) {
                     var itm = data.files.listFileItem.clone(),
@@ -144,7 +144,7 @@
                     $this.jfhmpf('addToPlaylist', add);
                 });
                 $(this).append(itm.trackInfo(file));
-            });
+            }, resetPagination);
         },
         play: function(song) {
             var $this=$(this);
@@ -209,12 +209,12 @@
             });
             return $this;
         },
-        paginatedList: function(uri, pageSize, listFunc) {
+        paginatedList: function(uri, pageSize, listFunc, resetPagination) {
             var widget = $(this),
                 data = widget.data('paginatedList'),
                 page;
 
-            if(typeof data=='undefined') {
+            if(typeof data=='undefined' || resetPagination===true) {
                 data = { page:0 };
                 widget.data('paginatedList', data);
             }
@@ -305,6 +305,6 @@ $.extend({
 $(function() {
     $('#jfhmpf').jfhmpf({
         listPageSize: 20,
-        statusInterval: 1000
+        statusInterval: 0
     });
 });
