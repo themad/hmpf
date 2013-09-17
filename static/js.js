@@ -306,6 +306,6 @@ $(function() {
     $('.button').attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false);
     $('#jfhmpf').jfhmpf({
         listPageSize: 20,
-        statusInterval: 0
+        statusInterval: 1000
     });
 });
