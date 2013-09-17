@@ -305,6 +305,6 @@ $.extend({
 $(function() {
     $('#jfhmpf').jfhmpf({
         listPageSize: 20,
-        statusInterval: 0
+        statusInterval: 1000
     });
 });
