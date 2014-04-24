@@ -322,25 +322,19 @@ instance ToJSON MPD.LsResult where
 instance FromJSON MPD.LsResult where
          parseJSON _ = mzero
 
-instance ToJSON MPD.Value where
-         toJSON (MPD.Value a)  = String . Data.Text.pack.show $ a
-
--- dummy instance, because I'm too stupid
-instance FromJSON MPD.Value where
-    parseJSON _ = mzero
-
-$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Id)
-$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.MPDError)
-$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Status)
-$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.State)
-$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.ACKType)
-
 instance FromJSON ByteString where
     parseJSON (String a) = pure . encodeUtf8 $ a
     parseJSON _ = mzero
 
 instance ToJSON ByteString where
-    toJSON a = String . Data.Text.pack.show $ a  
+    toJSON a = String . Data.Text.pack . BS.unpack $ a
+
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Value)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Id)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.MPDError)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Status)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.State)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.ACKType)
 
 $(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Path)
 -- $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Song)
