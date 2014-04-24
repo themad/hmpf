@@ -9,11 +9,11 @@ import Control.Monad
 import Control.Monad.Trans
 import Data.ByteString.Char8 as BS
 import Data.Text
--- import Data.Text.Encoding ()
+import Data.Text.Encoding
 import Data.Aeson 
 import Data.Aeson.TH
 import Data.Map.Lazy (Map, mapWithKey, elems)
-import Control.Applicative (optional)
+import Control.Applicative (optional, pure)
 import Data.Maybe (fromMaybe)
 import Data.HashMap.Strict (insert)
 import qualified Data.List as L
@@ -27,7 +27,7 @@ data Paginated a = Paginated {
      total :: Int,
      result:: [a] }
 
-$(deriveJSON id ''Paginated)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''Paginated)
 
 mapping :: ServerPartT IO Response
 mapping = msum [
@@ -302,7 +302,7 @@ instance FromReqURI MPD.PlaylistName where
 instance FromReqURI MPD.Path where
          fromReqURI a = Just $ MPD.Path (BS.pack a)
 
-$(deriveJSON (Prelude.drop 2) ''MPD.Metadata)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Metadata)
 
 instance ToJSON (Map MPD.Metadata [MPD.Value]) where
          toJSON m = object $ elems keyval
@@ -312,8 +312,7 @@ instance ToJSON (Map MPD.Metadata [MPD.Value]) where
 instance FromJSON (Map MPD.Metadata [MPD.Value]) where
          parseJSON _ = mzero
 
-
--- $(deriveJSON (Prelude.drop 2) ''MPD.LsResult)
+-- $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.LsResult)
 -- warum funktioniert das da nicht???
 instance ToJSON MPD.LsResult where
          toJSON (MPD.LsDirectory a) = object $ ["Directory" .= a]
@@ -323,16 +322,30 @@ instance ToJSON MPD.LsResult where
 instance FromJSON MPD.LsResult where
          parseJSON _ = mzero
 
-$(deriveJSON id ''MPD.MPDError)
-$(deriveJSON (Prelude.drop 2) ''MPD.Status)
-$(deriveJSON (Prelude.drop 2) ''MPD.State)
-$(deriveJSON id ''MPD.ACKType)
-$(deriveJSON (Prelude.drop 2) ''MPD.Value)
-$(deriveJSON id ''MPD.Id)
-$(deriveJSON id ''MPD.Path)
--- $(deriveJSON (Prelude.drop 2) ''MPD.Song)
-$(deriveJSON (Prelude.drop 2) ''MPD.Song)
+instance ToJSON MPD.Value where
+         toJSON (MPD.Value a)  = String . Data.Text.pack.show $ a
 
-$(deriveJSON id ''MPD.PlaylistName)
--- $(deriveJSON (Prelude.drop 2) ''MPD.LsResult)
--- $(deriveJSON (Prelude.drop 2) ''MPD.PlaylistName)
+-- dummy instance, because I'm too stupid
+instance FromJSON MPD.Value where
+    parseJSON _ = mzero
+
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Id)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.MPDError)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Status)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.State)
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.ACKType)
+
+instance FromJSON ByteString where
+    parseJSON (String a) = pure . encodeUtf8 $ a
+    parseJSON _ = mzero
+
+instance ToJSON ByteString where
+    toJSON a = String . Data.Text.pack.show $ a  
+
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Path)
+-- $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Song)
+$(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Song)
+
+$(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.PlaylistName)
+-- $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.LsResult)
+-- $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.PlaylistName)
