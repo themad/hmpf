@@ -66,6 +66,7 @@
                             break;
                         case 'State':
                             var stt = widget.find('.State');
+                            if(typeof value!='array') value = [value];
                             $.each(value, function(state) { stt.html(state); });
                             break;
                         case 'Song':
@@ -100,7 +101,7 @@
             $.jpost('/status', p);
             $this.jfhmpf('status');
         },
-        playlist: function() {
+        playlist: function(reset) {
             var $this = $(this);
                 data = $this.data('jfhmpf');
 
@@ -112,7 +113,7 @@
                 $(this).append(itm.trackInfo(track));
                 itm.find('.playSong').click(function() { $this.jfhmpf('play', track.Index + ''); });
                 itm.find('.removeFromPlaylist').click(function() { $this.jfhmpf('delete', track.Index + ''); });
-            });
+            }, reset);
             $this.find('.clearList').unbind('click').click(function() { $this.jfhmpf('clear'); });
         },
         files: function(path, resetPagination) {
@@ -161,7 +162,7 @@
             var $this=$(this);
             $.jpost('/clear', {});
             $this.jfhmpf('status');
-            $this.jfhmpf('playlist');
+            $this.jfhmpf('playlist', true);
         },
         toggle: function() {
             var $this=$(this);
@@ -201,7 +202,14 @@
                 switch(key) {
                     case 'Tags':
                         $this.trackInfo(value);
+                        if(!$.isEmptyObject(info.Tags)) {
+                            $this.find('._Tags').remove();
+                        } else {
+                            $this.find('.Tags').remove();
+                        }
                         break;
+                    case 'FilePath':
+                        value = value.replace(/^(\s*[0-9]+\s*-)?(.*)\..*/, '$2');
                     default:
                         $this.find('.' + key).html(value);
                         break;
@@ -306,6 +314,6 @@ $(function() {
     $('.button').attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false);
     $('#jfhmpf').jfhmpf({
         listPageSize: 20,
-        statusInterval: 1000
+        statusInterval: 10000
     });
 });
