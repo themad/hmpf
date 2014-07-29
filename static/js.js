@@ -81,11 +81,13 @@
                             widget.find('.' + key).html(value);
                             break;
                     }
-                    if(data.status.lastSongId != data.status.mpd_SongID) {
-                        if(data.status.lastSongId) $this.jfhmpf('playlist');
-                        data.status.lastSongId = data.status.mpd_SongID;
-                    }
                 });
+                if(data.status.lastSongId != data.status.mpd_SongID) {
+                    if(data.status.mpd_SongID) {
+                        $this.jfhmpf('playlist');
+                    }
+                    data.status.lastSongId = data.status.mpd_SongID;
+                }
                 $this.data('jfhmpf', data);
             });
         },
@@ -229,7 +231,7 @@
             page = data.page;
 
             $.jget(uri + '?count=' + pageSize + '&start=' + (page * pageSize), function(r) {
-                var pages = Math.floor(r.total / pageSize);
+                var pages = Math.floor((r.total-1) / pageSize);
                 widget.find('.list .item').remove();
 
                 $.each(r.result, function(i, item) {
@@ -314,6 +316,6 @@ $(function() {
     $('.button').attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false);
     $('#jfhmpf').jfhmpf({
         listPageSize: 20,
-        statusInterval: 10000
+        statusInterval: 10000000
     });
 });
