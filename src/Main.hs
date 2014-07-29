@@ -29,8 +29,15 @@ data Paginated a = Paginated {
 
 $(deriveJSON Data.Aeson.TH.defaultOptions ''Paginated)
 
+debug :: ServerPartT IO b
+debug = do
+        r <- askRq
+        liftIO $ Prelude.putStrLn (show $ rqPaths r)
+        mzero
+
 mapping :: ServerPartT IO Response
 mapping = msum [
+        debug,
         dir "play" $ path (\s->play $ Just s),
         dir "play" $ play Nothing,
         dir "delete" $ path delete,
@@ -293,14 +300,13 @@ paginate l = do
 
 instance ToMessage Value where
                    toMessage s = encode s
-                   toContentType _ = BS.pack "application/json" 
+                   toContentType _ = BS.pack "application/json; charset=UTF-8" 
 
 instance FromReqURI MPD.PlaylistName where
-         fromReqURI a = Just $ MPD.PlaylistName (BS.pack a)
-
+         fromReqURI a = Just $ MPD.PlaylistName $ encodeUtf8 $ Data.Text.pack a
 
 instance FromReqURI MPD.Path where
-         fromReqURI a = Just $ MPD.Path (BS.pack a)
+         fromReqURI a = Just $ MPD.Path $ encodeUtf8 $ Data.Text.pack a
 
 $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Metadata)
 
@@ -327,7 +333,7 @@ instance FromJSON ByteString where
     parseJSON _ = mzero
 
 instance ToJSON ByteString where
-    toJSON a = String . Data.Text.pack . BS.unpack $ a
+    toJSON a = String . decodeUtf8 $ a
 
 $(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Value)
 $(deriveJSON Data.Aeson.TH.defaultOptions ''MPD.Id)
