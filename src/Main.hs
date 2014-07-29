@@ -13,6 +13,7 @@ import Data.Text.Encoding
 import Data.Aeson 
 import Data.Aeson.TH
 import Data.Map.Lazy (Map, mapWithKey, elems)
+import Data.Monoid
 import Control.Applicative (optional, pure)
 import Data.Maybe (fromMaybe)
 import Data.HashMap.Strict (insert)
@@ -37,7 +38,7 @@ debug = do
 
 mapping :: ServerPartT IO Response
 mapping = msum [
-        debug,
+--        debug,
         dir "play" $ path (\s->play $ Just s),
         dir "play" $ play Nothing,
         dir "delete" $ path delete,
@@ -48,6 +49,7 @@ mapping = msum [
         dir "clear" clear,
         dir "resume" resume,
         dir "pause" pause,
+        dir "search" search,
         dir "next" next,
         dir "previous" previous,
         dir "prev" previous,
@@ -148,6 +150,19 @@ status = do
            combine a b = case toJSON a of 
                    Object o -> Object $ insert "Song" b o
                    _ -> toJSON a
+
+search :: ServerPartT IO Response
+search = do
+     method GET
+     value <- lookRead "q"
+     res1 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Artist MPD.=? value
+     res2 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Title MPD.=? value
+     res3 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Album MPD.=? value
+     res4 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Name MPD.=? value
+     let res = mconcat $ L.map etm [res1, res2, res3, res4]
+     simpleReply $ (Right res :: MPD.Response [MPD.Song])
+     where 
+          etm = either mempty id
 
 setCrossfade :: ServerPartT IO Response
 setCrossfade = do
@@ -307,6 +322,9 @@ instance FromReqURI MPD.PlaylistName where
 
 instance FromReqURI MPD.Path where
          fromReqURI a = Just $ MPD.Path $ encodeUtf8 $ Data.Text.pack a
+
+instance FromReqURI MPD.Value where
+         fromReqURI a = Just $ MPD.Value $ encodeUtf8 $ Data.Text.pack a
 
 $(deriveJSON Data.Aeson.TH.defaultOptions{fieldLabelModifier=(Prelude.drop 2)} ''MPD.Metadata)
 
