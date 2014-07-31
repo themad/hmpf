@@ -1,5 +1,10 @@
 Haskell:
- - search
+ - search - partially done, can't limit search to fields yet
+   caching long searches for pagination.
+ - configuration
+   interface, port
+   MPD_HOST already supported
+
 
 JS:
  - search, if done in haskell
