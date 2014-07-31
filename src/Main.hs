@@ -155,11 +155,8 @@ search :: ServerPartT IO Response
 search = do
      method GET
      value <- lookRead "q"
-     res1 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Artist MPD.=? value
-     res2 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Title MPD.=? value
-     res3 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Album MPD.=? value
-     res4 <- liftIO $ MPD.withMPD $ MPD.search $ MPD.Name MPD.=? value
-     let res = mconcat $ L.map etm [res1, res2, res3, res4]
+     reses <- mapM (\s -> liftIO $ MPD.withMPD $ MPD.search $ s MPD.=? value) [MPD.Artist, MPD.Title, MPD.Album, MPD.Name]
+     let res = mconcat $ L.map etm reses 
      simpleReply $ (Right res :: MPD.Response [MPD.Song])
      where 
           etm = either mempty id
