@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main where
 
@@ -18,6 +19,8 @@ import Control.Applicative (optional, pure)
 import Data.Maybe (fromMaybe)
 import Data.HashMap.Strict (insert)
 import qualified Data.List as L
+import Data.Typeable
+import System.Console.CmdArgs
 
 class SimpleReply a where
       simpleReply :: a -> ServerPartT IO Response
@@ -28,6 +31,11 @@ data Paginated a = Paginated {
      total :: Int,
      result:: [a] }
 
+data Configuration = Configuration {
+     confPort :: Int,
+     confStaticDir :: FilePath     
+     } deriving (Show, Data, Typeable)
+
 $(deriveJSON Data.Aeson.TH.defaultOptions ''Paginated)
 
 debug :: ServerPartT IO b
@@ -36,8 +44,8 @@ debug = do
         liftIO $ Prelude.putStrLn (show $ rqPaths r)
         mzero
 
-mapping :: ServerPartT IO Response
-mapping = msum [
+mapping :: Configuration -> ServerPartT IO Response
+mapping conf = msum [
 --        debug,
         dir "play" $ path (\s->play $ Just s),
         dir "play" $ play Nothing,
@@ -58,12 +66,22 @@ mapping = msum [
         dir "files" $ filelist "",
         dir "playlists" $ playlists,
         dir "status" $ status,
-        serveDirectory EnableBrowsing ["index.html"] "static",
+        serveDirectory EnableBrowsing ["index.html"] (confStaticDir conf),
         notFound $ toResponse $ ("hmpf: HTTP file not found (error 404)."::ByteString)
         ]
 
+config :: Configuration
+config = Configuration { 
+       confPort = (8000::Int) &= help "Port to listen on" &= name "port" &= explicit,
+       confStaticDir = ("static" :: FilePath) &= help "Static file directory" &= name "static" &= explicit &= typ "dir"
+       } &= summary "hmpf v0.01 (C) 2014 themad, 0mark" &= program "hmpf" 
+
 main :: IO ()
-main = Prelude.putStrLn "Starting server..." >>  simpleHTTP nullConf mapping
+main = do
+     conf <- cmdArgs config
+     Prelude.putStr "Starting server on port " 
+     Prelude.putStrLn $ show $ confPort conf
+     simpleHTTP nullConf{port = confPort conf} $ mapping conf
 
 restPath :: (MonadPlus m, FromReqURI a, ServerMonad m) => (a -> m b) -> m b
 restPath handle = do

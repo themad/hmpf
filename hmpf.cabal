@@ -52,6 +52,6 @@ executable hmpf
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base,happstack-server,libmpd,text,mtl,aeson,containers,bytestring,unordered-containers
+  build-depends:       base,happstack-server,libmpd,text,mtl,aeson,containers,bytestring,unordered-containers,cmdargs
   
   ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O
